@@ -7,7 +7,7 @@ on:
 
 env:
   isNightly: ${{ contains(github.ref, 'dev') }}
-  isFinalRelease: ${{ contains(github.ref, 'master') }}
+  isFinalRelease: ${{ contains(github.ref, 'main') }}
 
 jobs:
   build:
