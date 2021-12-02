@@ -8,7 +8,7 @@ DAEMON_NO_CHDIR       = 1
 DAEMON_NO_CLOSE_STDIO = 0
 
 
-GSOAP_VERSION     = 2.8.92
+GSOAP_VERSION     = 2.8.117
 GSOAP_INSTALL_DIR = ./gsoap-2.8
 GSOAP_DIR         = $(GSOAP_INSTALL_DIR)/gsoap
 GSOAP_CUSTOM_DIR  = $(GSOAP_DIR)/custom
@@ -33,14 +33,18 @@ CXXFLAGS         += -DDAEMON_PID_FILE_NAME='"$(DAEMON_PID_FILE_NAME)"'
 CXXFLAGS         += -DDAEMON_LOG_FILE_NAME='"$(DAEMON_LOG_FILE_NAME)"'
 CXXFLAGS         += -DDAEMON_NO_CHDIR=$(DAEMON_NO_CHDIR)
 CXXFLAGS         += -DDAEMON_NO_CLOSE_STDIO=$(DAEMON_NO_CLOSE_STDIO)
+CXXFLAGS         += -DLOCALE_NOT_USED
+CXXFLAGS         += -DWITH_NO_C_LOCALE
 
 CXXFLAGS         += -I$(COMMON_DIR)
 CXXFLAGS         += -I$(GENERATED_DIR)
 CXXFLAGS         += -I$(GSOAP_DIR) -I$(GSOAP_CUSTOM_DIR) -I$(GSOAP_PLUGIN_DIR) -I$(GSOAP_IMPORT_DIR)
 CXXFLAGS         += -std=c++11 -O2  -Wall  -pipe
 
-CXX              ?= g++
-
+ARMCXX           ?= arm-buildroot-linux-uclibcgnueabihf-c++
+HOSTCXX          ?= g++
+CXX              ?= $(ARMCXX)
+LDFLAGS          ?= -static-libstdc++
 
 
 
@@ -201,7 +205,7 @@ distclean: clean
 	@echo "Generating dependencies..."
 	@for src in $(SOURCES) ; do \
         echo "  [depend]  $$src" ; \
-        $(CXX) $(CXXFLAGS) -MT ".depend $${src%.*}.o $${src%.*}_$(DEBUG_SUFFIX).o" -MM $$src >> .depend ; \
+        $(CXX) $(LDFLAGS) $(CXXFLAGS) -MT ".depend $${src%.*}.o $${src%.*}_$(DEBUG_SUFFIX).o" -MM $$src >> .depend ; \
     done
 
 
@@ -241,14 +245,14 @@ BUILD_ECHO = echo "\n  [build]  $@:"
 
 define build_object
     @$(BUILD_ECHO)
-    $(CXX) -c $< -o $@  $(CXXFLAGS)
+    $(CXX) $(LDFLAGS) -c $< -o $@  $(CXXFLAGS)
 endef
 
 
 
 define build_bin
     @$(BUILD_ECHO)
-    $(CXX)  $1 -o $@  $(CXXFLAGS)
+    $(CXX)  $1 -o $@  $(CXXFLAGS) $(LDFLAGS)
     @echo "\n---- Compiled $@ ver $(DAEMON_MAJOR_VERSION).$(DAEMON_MINOR_VERSION).$(DAEMON_PATCH_VERSION) ----\n"
 endef
 
@@ -259,9 +263,7 @@ define build_gsoap
     # get archive
     if [ ! -f SDK/gsoap.zip ]; then \
         mkdir -p SDK; \
-        wget -O ./SDK/gsoap.zip.tmp "https://sourceforge.net/projects/gsoap2/files/gsoap-2.8/gsoap_$(GSOAP_VERSION).zip/download"   || \
-        wget -O ./SDK/gsoap.zip.tmp "https://sourceforge.net/projects/gsoap2/files/oldreleases/gsoap_$(GSOAP_VERSION).zip/download" || \
-        wget -O ./SDK/gsoap.zip.tmp "https://master.dl.sourceforge.net/project/gsoap2/oldreleases/gsoap_$(GSOAP_VERSION).zip"       && \
+        wget -O ./SDK/gsoap.zip.tmp "https://sourceforge.net/projects/gsoap2/files/gsoap_$(GSOAP_VERSION).zip/download"   && \
         mv ./SDK/gsoap.zip.tmp ./SDK/gsoap.zip; \
     fi
 
@@ -272,11 +274,13 @@ define build_gsoap
 
     # build
     if [ ! -f $(SOAPCPP2) ] || [ ! -f $(WSDL2H) ]; then \
+         CXX=$(HOSTCXX); \
          cd $(GSOAP_INSTALL_DIR); \
          ./configure $(GSOAP_CONFIGURE) && \
          make -j1; \
          cd ..;\
     fi
+    $(eval CXX=$(ARMCXX))
 endef
 
 
