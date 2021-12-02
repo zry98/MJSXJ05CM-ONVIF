@@ -1,4 +1,4 @@
-name: C/C++ CI
+name: Build
 
 on:
   push:
@@ -47,7 +47,7 @@ jobs:
       if: env.isNightly == 'true'
       with:
         automatic_release_tag: latest-rc
-        files: dist/onvif_srvd
+        files: onvif_srvd
         prerelease: true
         repo_token: "${{ secrets.GITHUB_TOKEN }}"
         title: latest-rc
@@ -57,7 +57,7 @@ jobs:
       if: env.isFinalRelease == 'true'
       with:
         automatic_release_tag: stable
-        files: dist/onvif_srvd
+        files: onvif_srvd
         prerelease: false
         repo_token: "${{ secrets.GITHUB_TOKEN }}"
         title: stable
